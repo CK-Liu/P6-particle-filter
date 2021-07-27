@@ -105,7 +105,19 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper 
    *   during the updateWeights phase.
    */
-
+  
+  for (unsigned int i=0; i<observations.size(); i++) {
+  	double min = dist(observations[i].x, observations[i].y, predicted[0].x, predicted[0].y);
+  	int associate_id = predicted[0].id;
+    for (unsigned int j=1; j<predicted.size(); j++) {
+      double current = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
+      if (current < min) {
+       	min = current;
+        associate_id = predicted[j].id;
+      }
+    }
+    observations[i].id = associate_id;
+  }
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -124,7 +136,45 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
-
+  for (unsigned int i=0; i<num_particles; i++) {
+  	vector<LandmarkObs> predictions;
+    for (unsigned int j=0; j<map_landmarks.landmark_list.size(); j++) {
+      LandmarkObs temp;
+      temp.x = map_landmarks.landmark_list[j].x_f;
+      temp.y = map_landmarks.landmark_list[j].y_f;
+      temp.id = map_landmarks.landmark_list[j].id_i; 
+      if (fabs(temp.x-particles[i].x)<=sensor_range && fabs(temp.y-particles[i].y)<=sensor_range) {
+      	predictions.push_back(temp);
+      }
+    }
+    
+    vector<LandmarkObs> observ_map;
+    for (unsigned int j = 0; j < observations.size(); j++) {
+      LandmarkObs temp;
+      temp.x = cos(particles[i].theta)*observations[j].x - sin(particles[i].theta)*observations[j].y + particles[i].x;
+      temp.y = sin(particles[i].theta)*observations[j].x + cos(particles[i].theta)*observations[j].y + particles[i].y;
+      temp.id = observations[j].id; 
+      observ_map.push_back(temp);
+    }
+    
+    dataAssociation(predictions, observ_map);
+    
+    particles[i].weight = 1.0;
+    for (unsigned int j = 0; j < observ_map.size(); j++) {
+      double observ_x, observ_y, predict_x, predict_y;
+      observ_x = observ_map[j].x;
+      observ_y = observ_map[j].y;
+      for (unsigned int k = 0; k < predictions.size(); k++) {
+        if (predictions[k].id == observ_map[j].id) {
+          predict_x = predictions[k].x;
+          predict_y = predictions[k].y;
+          break;
+        }
+      }
+      double observ_w = multiv_prob(std_landmark[0], std_landmark[1], observ_x, observ_y, predict_x, predict_y);
+      particles[i].weight *= observ_w;
+    }
+  }
 }
 
 void ParticleFilter::resample() {
