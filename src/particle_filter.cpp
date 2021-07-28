@@ -31,7 +31,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 10;  // TODO: Set the number of particles  
+  num_particles = 20;  // TODO: Set the number of particles  
   std::default_random_engine gen;
 
   // Create normal distributions for y and theta
@@ -87,7 +87,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     y = particles[i].y;
     theta = particles[i].theta;
     
-    if (fabs(theta) < 0.00001) {
+    if (fabs(yaw_rate) < 0.00001) {
       particles[i].x = x + velocity*delta_t*cos(theta) + sample_x;
       particles[i].y = y + velocity*delta_t*sin(theta) + sample_y;
     } else {
